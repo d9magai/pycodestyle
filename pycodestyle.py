@@ -2036,31 +2036,39 @@ class DiffReport(StandardReport):
         return super(DiffReport, self).error(line_number, offset, text, check)
 
 
+def style_guide_factory(*args, **kwargs):
+    """Factory of StyleGuide."""
+
+    # build options from the command line
+    checker_class = kwargs.pop('checker_class', Checker)
+    parse_argv = kwargs.pop('parse_argv', False)
+    config_file = kwargs.pop('config_file', False)
+    parser = kwargs.pop('parser', None)
+    # build options from dict
+    options_dict = dict(*args, **kwargs)
+    arglist = None if parse_argv else options_dict.get('paths', None)
+    verbose = options_dict.get('verbose', None)
+    options, paths = process_options(
+        arglist, parse_argv, config_file, parser, verbose)
+    if options_dict:
+        options.__dict__.update(options_dict)
+        if 'paths' in options_dict:
+            paths = options_dict['paths']
+
+    if not options.reporter:
+        options.reporter = BaseReport if options.quiet else StandardReport
+    return StyleGuide(
+        checker_class=checker_class, paths=paths, options=options)
+
+
 class StyleGuide(object):
     """Initialize a PEP-8 instance with few options."""
 
-    def __init__(self, *args, **kwargs):
-        # build options from the command line
-        self.checker_class = kwargs.pop('checker_class', Checker)
-        parse_argv = kwargs.pop('parse_argv', False)
-        config_file = kwargs.pop('config_file', False)
-        parser = kwargs.pop('parser', None)
-        # build options from dict
-        options_dict = dict(*args, **kwargs)
-        arglist = None if parse_argv else options_dict.get('paths', None)
-        verbose = options_dict.get('verbose', None)
-        options, self.paths = process_options(
-            arglist, parse_argv, config_file, parser, verbose)
-        if options_dict:
-            options.__dict__.update(options_dict)
-            if 'paths' in options_dict:
-                self.paths = options_dict['paths']
-
+    def __init__(self, checker_class=Checker, paths=None, options=None):
+        self.checker_class = checker_class
+        self.paths = paths
         self.runner = self.input_file
         self.options = options
-
-        if not options.reporter:
-            options.reporter = BaseReport if options.quiet else StandardReport
 
         options.select = tuple(options.select or ())
         if not (options.select or options.ignore or
@@ -2392,7 +2400,7 @@ def _main():
     except AttributeError:
         pass    # not supported on Windows
 
-    style_guide = StyleGuide(parse_argv=True)
+    style_guide = style_guide_factory(parse_argv=True)
     options = style_guide.options
 
     if options.doctest or options.testsuite:
