@@ -2179,7 +2179,7 @@ def get_parser(prog='pycodestyle', version=__version__):
     parser.config_options = [
         'exclude', 'filename', 'select', 'ignore', 'max-line-length',
         'hang-closing', 'count', 'format', 'quiet', 'show-pep8',
-        'show-source', 'statistics', 'verbose']
+        'show-source', 'statistics', 'checkstyle', 'verbose']
     parser.add_option('-v', '--verbose', default=0, action='count',
                       help="print status messages, or debug with -vv")
     parser.add_option('-q', '--quiet', default=0, action='count',
@@ -2223,6 +2223,8 @@ def get_parser(prog='pycodestyle', version=__version__):
     parser.add_option('--diff', action='store_true',
                       help="report changes only within line number ranges in "
                            "the unified diff received on STDIN")
+    parser.add_option('--checkstyle', action='store_true',
+                      help="output an XML report similar to Checkstyle")
     group = parser.add_option_group("Testing Options")
     if os.path.exists(TESTSUITE_PATH):
         group.add_option('--testsuite', metavar='dir',
