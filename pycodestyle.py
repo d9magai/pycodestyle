@@ -1876,6 +1876,11 @@ class Checker(object):
             self.check_logical()
         return self.report.get_file_results()
 
+    def update_report_checkstyle_element(self, checkstyle_element):
+        """update checkstyle_element in CheckstyleReport"""
+        assert isinstance(self.report, CheckstyleReport)
+        self.report.checkstyle_element = checkstyle_element
+
 
 class BaseReport(object):
     """Collect the results of the checks."""
@@ -2082,6 +2087,8 @@ class StyleGuide(object):
     """Initialize a PEP-8 instance with few options."""
 
     def __init__(self, *args, **kwargs):
+        # Checkstyle XML report element
+        self.checkstyle_element = ET.Element('checkstyle')
         # build options from the command line
         self.checker_class = kwargs.pop('checker_class', Checker)
         parse_argv = kwargs.pop('parse_argv', False)
@@ -2103,6 +2110,8 @@ class StyleGuide(object):
 
         if not options.reporter:
             options.reporter = BaseReport if options.quiet else StandardReport
+        if options.checkstyle:
+            options.reporter = CheckstyleReport
 
         options.select = tuple(options.select or ())
         if not (options.select or options.ignore or
@@ -2140,6 +2149,8 @@ class StyleGuide(object):
         except KeyboardInterrupt:
             print('... stopped')
         report.stop()
+        if self.options.checkstyle:
+            print(ET.tostring(self.checkstyle_element).decode("utf-8"))
         return report
 
     def input_file(self, filename, lines=None, expected=None, line_offset=0):
@@ -2148,6 +2159,8 @@ class StyleGuide(object):
             print('checking %s' % filename)
         fchecker = self.checker_class(
             filename, lines=lines, options=self.options)
+        if self.options.checkstyle:
+            fchecker.update_report_checkstyle_element(self.checkstyle_element)
         return fchecker.check_all(expected=expected, line_offset=line_offset)
 
     def input_dir(self, dirname):
