@@ -57,6 +57,7 @@ import time
 import tokenize
 import warnings
 import bisect
+from xml.etree import ElementTree as ET
 
 try:
     from functools import lru_cache
@@ -2178,6 +2179,27 @@ class StyleGuide(object):
             if any(not (code and self.ignore_code(code)) for code in codes):
                 checks.append((check.__name__, check, args))
         return sorted(checks)
+
+
+class CheckstyleStyleGuide(StyleGuide):
+    """Checkstyle XML report StyleGuide"""
+    checkstyle_element = ET.Element('checkstyle')
+
+    def check_files(self, paths=None):
+        report = super(CheckstyleStyleGuide, self).check_files(paths)
+        print(ET.tostring(self.checkstyle_element).decode("utf-8"))
+        return report
+
+    def input_file(self, filename, lines=None, expected=None, line_offset=0):
+        """Run all checks on a Python source file."""
+        fchecker = self.checker_class(
+            filename, lines=lines, options=self.options)
+        res = fchecker.check_all(
+            expected=expected,
+            line_offset=line_offset,
+            checkstyle_element=self.checkstyle_element
+        )
+        return res
 
 
 def get_parser(prog='pycodestyle', version=__version__):
