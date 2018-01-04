@@ -1819,9 +1819,11 @@ class Checker(object):
                 self.line_number += 1
             self.multiline = False
 
-    def check_all(self, expected=None, line_offset=0):
+    def check_all(self, expected=None, line_offset=0, checkstyle_element=None):
         """Run all checks on the input file."""
         self.report.init_file(self.filename, self.lines, expected, line_offset)
+        if checkstyle_element is not None:
+            self.report.checkstyle_element = checkstyle_element
         self.total_lines = len(self.lines)
         if self._ast_checks:
             self.check_ast()
@@ -2097,6 +2099,11 @@ def style_guide_factory(*args, **kwargs):
         options.__dict__.update(options_dict)
         if 'paths' in options_dict:
             paths = options_dict['paths']
+
+    if options.checkstyle:
+        options.reporter = CheckstyleReport
+        return CheckstyleStyleGuide(
+            checker_class=checker_class, paths=paths, options=options)
 
     if not options.reporter:
         options.reporter = BaseReport if options.quiet else StandardReport
