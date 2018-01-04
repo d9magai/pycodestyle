@@ -57,6 +57,7 @@ import time
 import tokenize
 import warnings
 import bisect
+from xml.etree import cElementTree as ET
 
 try:
     from functools import lru_cache
@@ -151,6 +152,10 @@ DUNDER_REGEX = re.compile(r'^__([^\s]+)__ = ')
 # a comment which is on a line by itself.
 COMMENT_WITH_NL = tokenize.generate_tokens(['#\n'].pop).send(None)[1] == '#\n'
 
+CHECKSTYLE_SERVERITY = {
+    'E': 'error',
+    'W': 'warning',
+}
 
 _checks = {'physical_line': {}, 'logical_line': {}, 'tree': {}}
 
@@ -2034,6 +2039,43 @@ class DiffReport(StandardReport):
         if line_number not in self._selected[self.filename]:
             return
         return super(DiffReport, self).error(line_number, offset, text, check)
+
+
+class CheckstyleReport(StandardReport):
+    """Collect and print the results in Checkstyle XML format."""
+
+    def __init__(self, options):
+        super(CheckstyleReport, self).__init__(options)
+        self._checkstyle_element = None
+
+    checkstyle_element = property(doc="Property checkstyle_element")
+
+    @checkstyle_element.setter
+    def checkstyle_element(self, value):
+        self._checkstyle_element = value
+
+    def get_file_results(self):
+        """Print the result and return the overall count for this file."""
+        if self._deferred_print:
+            self._deferred_print.sort()
+            element = ET.SubElement(
+                self._checkstyle_element, 'file', name=self.filename)
+            for line_number, offset, code, text, doc in self._deferred_print:
+                message = code + ' ' + text
+                if self._show_pep8 and doc:
+                    message += '\n' + doc.strip()
+
+                severity = CHECKSTYLE_SERVERITY.get(code.strip()[0], 'info')
+                ET.SubElement(element,
+                              'error', {
+                                  'severity': severity,
+                                  'line': str(self.line_offset + line_number),
+                                  'column': str(offset + 1),
+                                  'message': message,
+                              }
+                              )
+
+        return self.file_errors
 
 
 class StyleGuide(object):
