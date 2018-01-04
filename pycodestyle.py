@@ -2037,6 +2037,48 @@ class DiffReport(StandardReport):
         return super(DiffReport, self).error(line_number, offset, text, check)
 
 
+class CheckstyleReport(StandardReport):
+    """Collect and print the results in Checkstyle XML format."""
+
+    def __init__(self, options):
+        super(CheckstyleReport, self).__init__(options)
+        self._checkstyle_element = None
+
+    @property
+    def checkstyle_element(self):
+        return self._checkstyle_element
+
+    @checkstyle_element.setter
+    def checkstyle_element(self, value):
+        self._checkstyle_element = value
+
+    def get_file_results(self):
+        """Print the result and return the overall count for this file."""
+        if self._deferred_print:
+            self._deferred_print.sort()
+            element = ET.SubElement(
+                self._checkstyle_element, 'file', name=self.filename)
+            for line_number, offset, code, text, doc in self._deferred_print:
+                message = code + ' ' + text
+                if self._show_pep8 and doc:
+                    message += '\n' + doc.strip()
+
+                serverity = {
+                    'E': 'error',
+                    'W': 'warning',
+                }
+                ET.SubElement(element,
+                              'error', {
+                                  'severity': serverity[code.strip()[0]],
+                                  'line': str(self.line_offset + line_number),
+                                  'column': str(offset + 1),
+                                  'message': message,
+                              }
+                              )
+
+        return self.file_errors
+
+
 def style_guide_factory(*args, **kwargs):
     """Factory of StyleGuide."""
 
